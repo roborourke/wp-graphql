@@ -193,6 +193,11 @@ class TermObjectType extends WPObjectType {
 				}
 
 				/**
+				 * Add registered term meta.
+				 */
+				$fields = self::add_meta_fields( $fields, $single_name );
+
+				/**
 				 * This prepares the fields by sorting them and applying a filter for adjusting the schema.
 				 * Because these fields are implemented via a closure the prepare_fields needs to be applied
 				 * to the fields directly instead of being applied to all objects extending

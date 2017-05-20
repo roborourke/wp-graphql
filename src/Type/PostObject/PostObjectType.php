@@ -1,6 +1,7 @@
 <?php
 namespace WPGraphQL\Type\PostObject;
 
+use ElasticSearch\Exception;
 use GraphQL\Type\Definition\ObjectType;
 use GraphQL\Type\Definition\ResolveInfo;
 use GraphQLRelay\Relay;
@@ -360,6 +361,11 @@ class PostObjectType extends WPObjectType {
 						}
 					}
 				}
+
+				/**
+				 * Add registered post meta.
+				 */
+				$fields = self::add_meta_fields( $fields, $single_name );
 
 				/**
 				 * This prepares the fields by sorting them and applying a filter for adjusting the schema.

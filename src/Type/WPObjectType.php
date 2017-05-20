@@ -1,8 +1,12 @@
 <?php
 namespace WPGraphQL\Type;
 
+use ElasticSearch\Exception;
 use GraphQL\Type\Definition\ObjectType;
 use WPGraphQL\Data\DataSource;
+use WPGraphQL\Types;
+use WPGraphQL\AppContext;
+use GraphQL\Type\Definition\ResolveInfo;
 
 /**
  * Class WPObjectType
@@ -87,6 +91,64 @@ class WPObjectType extends ObjectType {
 
 		return ! empty( self::$prepared_fields[ $type_name ] ) ? self::$prepared_fields[ $type_name ] : null;
 
+	}
+
+	/**
+	 * Adds the meta fields for this $object_type registered using
+	 * register_meta().
+	 *
+	 * @param array $fields
+	 * @param string $object_type
+	 * @return array
+	 * @throws Exception If a meta key is the same as a default key warn the dev.
+	 */
+	public static function add_meta_fields( $fields, $object_type ) {
+		// Get registered meta info.
+		$meta_keys = get_registered_meta_keys( $object_type );
+		if ( ! empty( $meta_keys ) ) {
+			foreach ( $meta_keys as $key => $field_args ) {
+				if ( isset( $fields[ $key ] ) ) {
+					throw new Exception( sprintf( 'Post meta key "%s" is a reserved word.', $key ) );
+				}
+				if ( ! $field_args['show_in_rest'] ) {
+					continue;
+				}
+				$fields[ $key ] = array(
+					'type'        => self::resolve_meta_type( $field_args['type'], $field_args['single'] ),
+					'description' => $field_args['description'],
+					'resolve'     => function( \WP_Post $post, $args, AppContext $context, ResolveInfo $info ) use ( $key, $field_args ) {
+						return get_post_meta( $post->ID, $key, $field_args['single'] );
+					},
+				);
+			}
+		}
+
+		return $fields;
+	}
+
+	/**
+	 * Resolves REST API types to meta data types.
+	 *
+	 * @param \GraphQL\Type\Definition\AbstractType $type
+	 * @param bool $single
+	 * @return mixed
+	 */
+	public static function resolve_meta_type( $type, $single = true ) {
+		switch ( $type ) {
+			case 'integer':
+				$type = Types::int();
+				break;
+			case 'float':
+				$type = Types::float();
+				break;
+			case 'boolean':
+				$type = Types::boolean();
+				break;
+			default:
+				$type = Types::string();
+		}
+
+		return $single ? $type : Types::list_of( $type );
 	}
 
 }
